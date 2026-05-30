@@ -103,7 +103,6 @@ async def enrich_company_endpoint(payload: EnrichRequest):
 @app.get("/results")
 async def get_all_results():
     with open(DB_FILE, "r") as f: return json.load(f)
-
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
     return """
@@ -114,47 +113,54 @@ async def serve_frontend():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>B2B Prospect Research Agent</title>
         <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            .hidden { display: none; }
+        </style>
     </head>
-    <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
-        <div class="max-w-6xl mx-auto px-4 py-8">
-            <header class="mb-8 border-b border-slate-800 pb-6">
-                <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">
-                    🎯 AI Prospect Research Agent
-                </h1>
-            </header>
+    <body class="bg-slate-900 text-slate-100 font-sans min-h-screen p-8">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-4xl font-bold text-teal-400 mb-6">🎯 AI Prospect Research Agent</h1>
             
-            <div class="bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700 mb-8">
-                <h2 class="text-xl font-bold mb-4 text-teal-400">Enrich New Target</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <input id="webName" type="text" placeholder="Company Name" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white">
-                    <input id="webUrl" type="text" placeholder="https://example.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white">
-                </div>
-                <button onclick="enrichTarget()" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-6 py-2 rounded-lg">
-                    ⚡ Run Enrichment Pipeline
+            <div class="bg-slate-800 p-6 rounded-lg border border-slate-700 shadow-lg">
+                <input id="webName" placeholder="Company Name" class="w-full bg-slate-900 p-3 mb-2 rounded border border-slate-600 text-white">
+                <input id="webUrl" placeholder="https://example.com" class="w-full bg-slate-900 p-3 mb-4 rounded border border-slate-600 text-white">
+                <button onclick="enrichTarget()" class="bg-teal-600 px-6 py-2 rounded text-white font-bold hover:bg-teal-500">
+                    Run Enrichment
                 </button>
             </div>
             
-            <div id="singleOutput" class="space-y-4"></div>
+            <div id="statusIndicator" class="hidden mt-4 text-teal-400">Processing...</div>
+            <div id="singleOutput" class="mt-6 space-y-4"></div>
         </div>
 
         <script>
             async function enrichTarget() {
                 const url = document.getElementById("webUrl").value;
                 const name = document.getElementById("webName").value;
-                const res = await fetch("/enrich", {
-                    method: "POST",
-                    headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({url, website_name: name})
-                });
-                const data = await res.json();
-                document.getElementById("singleOutput").innerHTML = `<div class="bg-slate-800 p-4 rounded-lg">
-                    <h3 class="text-teal-400 font-bold">${data.website_name}</h3>
-                    <p>Core Service: ${data.core_service}</p>
-                    <p class="italic text-slate-400">"${data.outreach_opener}"</p>
-                </div>`;
+                document.getElementById("statusIndicator").classList.remove("hidden");
+                
+                try {
+                    const res = await fetch("/enrich", {
+                        method: "POST",
+                        headers: {"Content-Type": "application/json"},
+                        body: JSON.stringify({url: url, website_name: name})
+                    });
+                    const data = await res.json();
+                    document.getElementById("singleOutput").innerHTML = `
+                        <div class="bg-slate-800 p-4 rounded border border-teal-500">
+                            <h3 class="font-bold text-teal-400">${data.website_name}</h3>
+                            <p>${data.core_service}</p>
+                            <p class="text-slate-400 italic mt-2">"${data.outreach_opener}"</p>
+                        </div>`;
+                } catch(e) {
+                    alert("Error: " + e);
+                } finally {
+                    document.getElementById("statusIndicator").classList.add("hidden");
+                }
             }
         </script>
     </body>
     </html>
     """
+
     
